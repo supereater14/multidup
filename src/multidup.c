@@ -108,6 +108,7 @@ int main(int argc, char **argv){
 	pthread_join(worker_threads[i], NULL);
     }
     free(workers);
+    free(worker_threads);
     
     return 0;
 }
