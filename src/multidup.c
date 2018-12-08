@@ -1,3 +1,9 @@
+/* Multidup
+ *
+ * One-to-many file duplication tool
+ *
+ * Copyright (c) 2018 Alec Hitchiner
+ */
 #include "dup_worker.h"
 
 #include <pthread.h>
@@ -13,6 +19,8 @@ int main(int argc, char **argv){
 
     /* Check argument count */
     if(argc < 3){
+	printf("Multidup: A one-to-many file duplication tool\n");
+	printf("Copyright (c) 2018 Alec Hitchiner\n");
 	printf("Usage: %s [input file] [output file] {[output file]...}\n",
 		argv[0]);
 	return -1;

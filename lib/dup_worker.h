@@ -1,3 +1,9 @@
+/* Multidup
+ *
+ * One-to-many file duplication tool
+ *
+ * Copyright (c) 2018 Alec Hitchiner
+ */
 #ifndef DUP_WORKER_H
 #define DUP_WORKER_H
 
