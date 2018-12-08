@@ -15,7 +15,7 @@ int main(int argc, char **argv){
 	dup_worker *workers;
 	int is_done, is_error;
 	pthread_t *worker_threads;
-	size_t i;
+	size_t i, j;
 
 	/* Check argument count */
 	if(argc < 3){
@@ -59,8 +59,8 @@ int main(int argc, char **argv){
 
 		/* Process each worker */
 		for(i = 0; i < (size_t)(argc - 2); i++){
-			printf("%21s: ", workers[i].output_fname);
 			pthread_mutex_lock(&(workers[i].mutex));
+			printf("%21s: ", workers[i].output_fname);
 			switch(workers[i].state){
 				case WORKER_NOT_STARTED:
 					printf("Starting\n");
@@ -73,8 +73,8 @@ int main(int argc, char **argv){
 				case WORKER_WORKING:
 					/* Progress bar */
 					printf("%u%% [", workers[i].progress);
-					for(i = 0; i < 50; i++){
-						if(i < (workers[i].progress / 2)){
+					for(j = 0; j < 50; j++){
+						if(j < (workers[i].progress / 2)){
 							printf("#");
 						} else{
 							printf(" ");
