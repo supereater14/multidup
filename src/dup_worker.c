@@ -19,6 +19,7 @@ void *dup_worker_thread(void *worker){
     off_t input_size, check_off;
     ssize_t next_percent, step_size;
     ssize_t data_read, data_written, data_waiting, total_written;
+    struct stat infile_stat;
 
     /* Get worker data structure */
     worker_data = (dup_worker*)worker;
@@ -34,9 +35,18 @@ void *dup_worker_thread(void *worker){
 	return NULL;
     }
 
+    /* Get input file mode so that output can match */
+    if(fstat(infile, &infile_stat) < 0){
+	pthread_mutex_lock(&worker_data->mutex);
+	worker_data->state = WORKER_ERROR;
+	pthread_mutex_unlock(&worker_data->mutex);
+    }
+
     /* Open output file */
     pthread_mutex_lock(&worker_data->mutex);
-    outfile = open(worker_data->output_fname, O_WRONLY | O_CREAT);
+    outfile = open(worker_data->output_fname,
+	    	O_WRONLY | O_CREAT,
+		infile_stat.st_mode);
     pthread_mutex_unlock(&worker_data->mutex);
     if(outfile < 0){
 	pthread_mutex_lock(&worker_data->mutex);
