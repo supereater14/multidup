@@ -19,7 +19,13 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(LIB_DIR)/%.h
 $(BIN_DIR)/%: $(SRC_DIR)/%.c $(OBJS)
 	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $< $(OBJS)
 
-.PHONY: clean
+.PHONY: clean install remove
 
 clean:
 	rm -f $(BINS) $(OBJS)
+
+install: $(BINS)
+	cp $(BIN_DIR)/multidup /bin/
+
+remove:
+	rm -f /bin/multidup
