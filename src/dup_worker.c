@@ -6,8 +6,10 @@
  */
 #include "dup_worker.h"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -31,6 +33,8 @@ void *dup_worker_thread(void *worker){
 	if(infile < 0){
 		pthread_mutex_lock(&worker_data->mutex);
 		worker_data->state = WORKER_ERROR;
+		worker_data->errnum = errno;
+		strerror_r(errno, worker_data->err_msg, 49);
 		pthread_mutex_unlock(&worker_data->mutex);
 		return NULL;
 	}
@@ -39,6 +43,8 @@ void *dup_worker_thread(void *worker){
 	if(fstat(infile, &infile_stat) < 0){
 		pthread_mutex_lock(&worker_data->mutex);
 		worker_data->state = WORKER_ERROR;
+		worker_data->errnum = errno;
+		strerror_r(errno, worker_data->err_msg, 49);
 		pthread_mutex_unlock(&worker_data->mutex);
 	}
 
@@ -51,6 +57,8 @@ void *dup_worker_thread(void *worker){
 	if(outfile < 0){
 		pthread_mutex_lock(&worker_data->mutex);
 		worker_data->state = WORKER_ERROR;
+		worker_data->errnum = errno;
+		strerror_r(errno, worker_data->err_msg, 49);
 		pthread_mutex_unlock(&worker_data->mutex);
 		close(infile);
 		return NULL;
@@ -61,6 +69,8 @@ void *dup_worker_thread(void *worker){
 	if(input_size < 0){
 		pthread_mutex_lock(&worker_data->mutex);
 		worker_data->state = WORKER_ERROR;
+		worker_data->errnum = errno;
+		strerror_r(errno, worker_data->err_msg, 49);
 		pthread_mutex_unlock(&worker_data->mutex);
 		close(infile);
 		close(outfile);
@@ -72,6 +82,8 @@ void *dup_worker_thread(void *worker){
 	if(check_off < 0){
 		pthread_mutex_lock(&worker_data->mutex);
 		worker_data->state = WORKER_ERROR;
+		worker_data->errnum = errno;
+		strerror_r(errno, worker_data->err_msg, 49);
 		pthread_mutex_unlock(&worker_data->mutex);
 		close(infile);
 		close(outfile);
@@ -91,6 +103,8 @@ void *dup_worker_thread(void *worker){
 		if(data_read < 0){
 			pthread_mutex_lock(&worker_data->mutex);
 			worker_data->state = WORKER_ERROR;
+		worker_data->errnum = errno;
+		strerror_r(errno, worker_data->err_msg, 49);
 			pthread_mutex_unlock(&worker_data->mutex);
 			close(infile);
 			close(outfile);
@@ -109,6 +123,8 @@ void *dup_worker_thread(void *worker){
 			if(data_written < 0){
 				pthread_mutex_lock(&worker_data->mutex);
 				worker_data->state = WORKER_ERROR;
+		worker_data->errnum = errno;
+		strerror_r(errno, worker_data->err_msg, 49);
 				pthread_mutex_unlock(&worker_data->mutex);
 				close(infile);
 				close(outfile);

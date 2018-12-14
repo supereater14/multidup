@@ -67,7 +67,7 @@ int main(int argc, char **argv){
 					is_done = 0;
 					break;
 				case WORKER_ERROR:
-					printf("ERROR\n");
+					printf("ERROR - %s\n", workers[i].err_msg);
 					is_error = 1;
 					break;
 				case WORKER_WORKING:

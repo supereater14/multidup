@@ -24,6 +24,8 @@ typedef struct {
 	unsigned int progress;
 	pthread_mutex_t mutex;
 	worker_state state;
+	int errnum;
+	char err_msg[49];
 } dup_worker;
 
 void *dup_worker_thread(void *worker);
