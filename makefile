@@ -4,7 +4,7 @@ OBJ_DIR=obj
 SRC_DIR=src
 
 CC=gcc
-CFLAGS=-O3 -Wall -Wextra -pedantic -Werror -I$(LIB_DIR)
+CFLAGS=-O3 -Wall -Wextra -pedantic -Werror -I$(LIB_DIR) -D_FILE_OFFSET_BITS=64
 LFLAGS=-lpthread
 
 BINS=$(BIN_DIR)/multidup
