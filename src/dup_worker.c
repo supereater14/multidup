@@ -19,8 +19,8 @@ void *dup_worker_thread(void *worker){
 	dup_worker *worker_data;
 	int infile, outfile;
 	off_t input_size, check_off;
-	ssize_t next_percent, step_size;
-	ssize_t data_read, data_written, data_waiting, total_written;
+	off_t next_percent, step_size, total_written;
+	ssize_t data_read, data_written, data_waiting;
 	struct stat infile_stat;
 
 	/* Get worker data structure */
