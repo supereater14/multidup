@@ -2,7 +2,7 @@
  *
  * One-to-many file duplication tool
  *
- * Copyright (c) 2018 Alec Hitchiner
+ * Copyright (c) 2018-2019 Alec Hitchiner
  */
 #include "dup_worker.h"
 
