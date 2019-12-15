@@ -14,6 +14,8 @@
 int main(int argc, char **argv){
 	dup_worker *workers;
 	int is_done, is_error;
+	pthread_cond_t status_condition;
+	pthread_mutex_t status_mutex;
 	pthread_t *worker_threads;
 	size_t i, j;
 
@@ -26,13 +28,18 @@ int main(int argc, char **argv){
 		return -1;
 	}
 
+	/* Create status update mutex and condition variable */
+	pthread_mutex_init(&status_mutex, NULL);
+	pthread_cond_init(&status_condition, NULL);
+
 	/* Configure worker threads */
 	workers = malloc((argc - 2) * sizeof(dup_worker));
 	for(i = 0; i < (size_t)(argc - 2); i++){
 		workers[i].input_fname = argv[1];
 		workers[i].output_fname = argv[2 + i];
 		workers[i].progress = 0;
-		pthread_mutex_init(&(workers[i].mutex), NULL);
+		workers[i].status_condition = &status_condition;
+		workers[i].status_mutex = &status_mutex;
 		workers[i].state = WORKER_NOT_STARTED;
 	}
 
@@ -45,11 +52,11 @@ int main(int argc, char **argv){
 				&(workers[i]));
 	}
 
+	/* Acquire status updating mutex */
+	pthread_mutex_lock(&status_mutex);
+
 	/* Start display */
 	do{
-		/* Update every 5 seconds */
-		sleep(5);
-
 		/* Initialize possible states */
 		is_done = 1;
 		is_error = 0;
@@ -59,7 +66,6 @@ int main(int argc, char **argv){
 
 		/* Process each worker */
 		for(i = 0; i < (size_t)(argc - 2); i++){
-			pthread_mutex_lock(&(workers[i].mutex));
 			printf("%21s: ", workers[i].output_fname);
 			switch(workers[i].state){
 				case WORKER_NOT_STARTED:
@@ -90,9 +96,16 @@ int main(int argc, char **argv){
 					printf("This should never appear\n");
 					break;
 			}
-			pthread_mutex_unlock(&(workers[i].mutex));
+		}
+
+		if(!is_done){
+			/* Wait for some thread to have a status update */
+			pthread_cond_wait(&status_condition, &status_mutex);
 		}
 	}while(!is_done);
+
+	/* Release status updating mutex */
+	pthread_mutex_unlock(&status_mutex);
 
 	/* Synchronize */
 	printf("Synchronizing disks...\n");

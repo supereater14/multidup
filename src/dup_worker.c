@@ -27,39 +27,38 @@ void *dup_worker_thread(void *worker){
 	worker_data = (dup_worker*)worker;
 
 	/* Open input file */
-	pthread_mutex_lock(&worker_data->mutex);
 	infile = open(worker_data->input_fname, O_RDONLY);
-	pthread_mutex_unlock(&worker_data->mutex);
 	if(infile < 0){
-		pthread_mutex_lock(&worker_data->mutex);
+		pthread_mutex_lock(worker_data->status_mutex);
 		worker_data->state = WORKER_ERROR;
 		worker_data->errnum = errno;
 		strerror_r(errno, worker_data->err_msg, 49);
-		pthread_mutex_unlock(&worker_data->mutex);
+		pthread_cond_signal(worker_data->status_condition);
+		pthread_mutex_unlock(worker_data->status_mutex);
 		return NULL;
 	}
 
 	/* Get input file mode so that output can match */
 	if(fstat(infile, &infile_stat) < 0){
-		pthread_mutex_lock(&worker_data->mutex);
+		pthread_mutex_lock(worker_data->status_mutex);
 		worker_data->state = WORKER_ERROR;
 		worker_data->errnum = errno;
 		strerror_r(errno, worker_data->err_msg, 49);
-		pthread_mutex_unlock(&worker_data->mutex);
+		pthread_cond_signal(worker_data->status_condition);
+		pthread_mutex_unlock(worker_data->status_mutex);
 	}
 
 	/* Open output file */
-	pthread_mutex_lock(&worker_data->mutex);
 	outfile = open(worker_data->output_fname,
 			O_WRONLY | O_CREAT,
 			infile_stat.st_mode);
-	pthread_mutex_unlock(&worker_data->mutex);
 	if(outfile < 0){
-		pthread_mutex_lock(&worker_data->mutex);
+		pthread_mutex_lock(worker_data->status_mutex);
 		worker_data->state = WORKER_ERROR;
 		worker_data->errnum = errno;
 		strerror_r(errno, worker_data->err_msg, 49);
-		pthread_mutex_unlock(&worker_data->mutex);
+		pthread_cond_signal(worker_data->status_condition);
+		pthread_mutex_unlock(worker_data->status_mutex);
 		close(infile);
 		return NULL;
 	}
@@ -67,11 +66,12 @@ void *dup_worker_thread(void *worker){
 	/* Find input file length */
 	input_size = lseek(infile, 0, SEEK_END);
 	if(input_size < 0){
-		pthread_mutex_lock(&worker_data->mutex);
+		pthread_mutex_lock(worker_data->status_mutex);
 		worker_data->state = WORKER_ERROR;
 		worker_data->errnum = errno;
 		strerror_r(errno, worker_data->err_msg, 49);
-		pthread_mutex_unlock(&worker_data->mutex);
+		pthread_cond_signal(worker_data->status_condition);
+		pthread_mutex_unlock(worker_data->status_mutex);
 		close(infile);
 		close(outfile);
 		return NULL;
@@ -80,11 +80,12 @@ void *dup_worker_thread(void *worker){
 	/* Seek back to start of file */
 	check_off = lseek(infile, 0, SEEK_SET);
 	if(check_off < 0){
-		pthread_mutex_lock(&worker_data->mutex);
+		pthread_mutex_lock(worker_data->status_mutex);
 		worker_data->state = WORKER_ERROR;
 		worker_data->errnum = errno;
 		strerror_r(errno, worker_data->err_msg, 49);
-		pthread_mutex_unlock(&worker_data->mutex);
+		pthread_cond_signal(worker_data->status_condition);
+		pthread_mutex_unlock(worker_data->status_mutex);
 		close(infile);
 		close(outfile);
 		return NULL;
@@ -97,15 +98,20 @@ void *dup_worker_thread(void *worker){
 	/* Start duplicating */
 	data_read = 0;
 	total_written = 0;
+	pthread_mutex_lock(worker_data->status_mutex);
+	worker_data->state = WORKER_WORKING;
+	pthread_cond_signal(worker_data->status_condition);
+	pthread_mutex_unlock(worker_data->status_mutex);
 	do{
 		/* Read block of data */
 		data_read = read(infile, buf, BLOCK_SIZE);
 		if(data_read < 0){
-			pthread_mutex_lock(&worker_data->mutex);
+			pthread_mutex_lock(worker_data->status_mutex);
 			worker_data->state = WORKER_ERROR;
-		worker_data->errnum = errno;
-		strerror_r(errno, worker_data->err_msg, 49);
-			pthread_mutex_unlock(&worker_data->mutex);
+			worker_data->errnum = errno;
+			strerror_r(errno, worker_data->err_msg, 49);
+			pthread_cond_signal(worker_data->status_condition);
+			pthread_mutex_unlock(worker_data->status_mutex);
 			close(infile);
 			close(outfile);
 			return NULL;
@@ -113,19 +119,17 @@ void *dup_worker_thread(void *worker){
 
 		/* Write block of data */
 		data_waiting = data_read;
-		pthread_mutex_lock(&worker_data->mutex);
-		worker_data->state = WORKER_WORKING;
-		pthread_mutex_unlock(&worker_data->mutex);
 		do{
 			data_written = write(outfile,
 					buf + (data_read - data_waiting),
 					data_waiting);
 			if(data_written < 0){
-				pthread_mutex_lock(&worker_data->mutex);
+				pthread_mutex_lock(worker_data->status_mutex);
 				worker_data->state = WORKER_ERROR;
-		worker_data->errnum = errno;
-		strerror_r(errno, worker_data->err_msg, 49);
-				pthread_mutex_unlock(&worker_data->mutex);
+				worker_data->errnum = errno;
+				strerror_r(errno, worker_data->err_msg, 49);
+				pthread_cond_signal(worker_data->status_condition);
+				pthread_mutex_unlock(worker_data->status_mutex);
 				close(infile);
 				close(outfile);
 				return NULL;
@@ -138,9 +142,10 @@ void *dup_worker_thread(void *worker){
 
 		/* Advance progress */
 		if(total_written >= next_percent){
-			pthread_mutex_lock(&worker_data->mutex);
+			pthread_mutex_lock(worker_data->status_mutex);
 			worker_data->progress++;
-			pthread_mutex_unlock(&worker_data->mutex);
+			pthread_cond_signal(worker_data->status_condition);
+			pthread_mutex_unlock(worker_data->status_mutex);
 			next_percent += step_size;
 		}
 	} while(data_read > 0);
@@ -150,9 +155,9 @@ void *dup_worker_thread(void *worker){
 	close(outfile);
 
 	/* Finish */
-	pthread_mutex_lock(&worker_data->mutex);
+	pthread_mutex_lock(worker_data->status_mutex);
 	worker_data->state = WORKER_DONE;
-	pthread_mutex_unlock(&worker_data->mutex);
+	pthread_mutex_unlock(worker_data->status_mutex);
 
 	return NULL;
 }
