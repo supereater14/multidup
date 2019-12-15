@@ -22,7 +22,8 @@ typedef struct {
 	char *input_fname;
 	char *output_fname;
 	unsigned int progress;
-	pthread_mutex_t mutex;
+	pthread_cond_t *status_condition;
+	pthread_mutex_t *status_mutex;
 	worker_state state;
 	int errnum;
 	char err_msg[49];
